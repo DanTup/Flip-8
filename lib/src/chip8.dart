@@ -1,0 +1,1 @@
+class Chip8 {}

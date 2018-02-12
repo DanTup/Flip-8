@@ -55,6 +55,36 @@ class Chip8 {
     };
   }
 
+  void loadProgram(Uint8List data) {}
+
+  void tick() {
+    // Read the two bytes of OpCode (big endian).
+    var opCode = _ram[_pc++] << 8 | _ram[_pc++];
+
+    // Split data into the possible formats the instruction might need.
+    // https://en.wikipedia.org/wiki/CHIP-8#Opcode_table
+    var op = new OpCodeData()
+      ..opCode = opCode
+      ..nnn = opCode & 0x0FFF
+      ..nn = opCode & 0x00FF
+      ..n = opCode & 0x000F
+      ..x = (opCode & 0x0F00) >> 8
+      ..y = (opCode & 0x00F0) >> 4;
+
+    // Loop up the OpCode using the first nibble and execute.
+    _opCodes[opCode >> 12](op);
+  }
+
+  void tick60Hz() {
+    if (_delay > 0) _delay--;
+    if (_needsRedraw) {
+      _needsRedraw = false;
+      _draw();
+    }
+  }
+
+  void _draw() {}
+
   void _writeFonts() {
     var offset = 0x0;
     _writeFont(5 * offset++, Font.d0);

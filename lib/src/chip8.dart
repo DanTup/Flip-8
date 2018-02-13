@@ -1,3 +1,5 @@
+import 'dart:collection';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flip8/src/font.dart';
 
@@ -13,8 +15,10 @@ class Chip8 {
   int _sp = 0;
   Uint16List _stack = new Uint16List(16);
   Uint8List _ram = new Uint8List(0x1000);
+  HashSet<int> _pressedKeys = new HashSet<int>();
 
-  final List<List<bool>> _screenRows = new List<List<bool>>.generate(
+  final _rng = new Random();
+  final List<List<bool>> _screenBuffer = new List<List<bool>>.generate(
       screenWidth, (_) => new List<bool>.filled(screenHeight, false),
       growable: false);
   Map<int, void Function(OpCodeData)> _opCodes;
@@ -83,6 +87,14 @@ class Chip8 {
     }
   }
 
+  void keyDown(int key) {
+    _pressedKeys.add(key);
+  }
+
+  void keyUp(int key) {
+    _pressedKeys.remove(key);
+  }
+
   void _draw() {}
 
   void _writeFonts() {
@@ -113,31 +125,183 @@ class Chip8 {
     _ram[address + 4] = (fontData & 0x00000000F0) >> (8 * 0);
   }
 
-  void _clearOrReturn(OpCodeData data) {}
-  void _jump(OpCodeData data) {}
-  void _callSubroutine(OpCodeData data) {}
-  void _skipIfXEqual(OpCodeData data) {}
-  void _skipIfXNotEqual(OpCodeData data) {}
-  void _skipIfXEqualY(OpCodeData data) {}
-  void _setX(OpCodeData data) {}
-  void _addX(OpCodeData data) {}
-  void _arithmetic(OpCodeData data) {}
+  void _push(int value) {
+    _stack[_sp++] = value;
+  }
+
+  int _pop() {
+    return _stack[--_sp];
+  }
+
+  void _clearOrReturn(OpCodeData data) {
+    if (data.nn == 0xE0) {
+      for (var x = 0; x < screenWidth; x++) {
+        for (var y = 0; y < screenHeight; y++) {
+          _screenBuffer[x][y] = false;
+        }
+      }
+    } else if (data.nn == 0xEE) {
+      _pc = _pop();
+    }
+  }
+
+  void _jump(OpCodeData data) {
+    _pc = data.nnn;
+  }
+
+  void _callSubroutine(OpCodeData data) {
+    _push(_pc);
+    _pc = data.nnn;
+  }
+
+  void _skipIfXEqual(OpCodeData data) {
+    if (_v[data.x] == data.nn) {
+      _pc += 2;
+    }
+  }
+
+  void _skipIfXNotEqual(OpCodeData data) {
+    if (_v[data.x] != data.nn) {
+      _pc += 2;
+    }
+  }
+
+  void _skipIfXEqualY(OpCodeData data) {
+    if (_v[data.x] == _v[data.y]) {
+      _pc += 2;
+    }
+  }
+
+  void _setX(OpCodeData data) {
+    _v[data.x] = data.nn;
+  }
+
+  void _addX(OpCodeData data) {
+    _v[data.x] += data.nn; // TODO: Do we need to handle overflow?
+  }
+
+  void _arithmetic(OpCodeData data) {
+    switch (data.n) {
+      case 0x0:
+        _v[data.x] = _v[data.y];
+        break;
+      case 0x1:
+        _v[data.x] |= _v[data.y];
+        break;
+      case 0x2:
+        _v[data.x] &= _v[data.y];
+        break;
+      case 0x3:
+        _v[data.x] ^= _v[data.y];
+        break;
+      case 0x4:
+        // Set flag if we overflowed.
+        _v[0xF] = _v[data.x] + _v[data.y] > 0xFF ? 1 : 0;
+        _v[data.x] += _v[data.y];
+        break;
+      case 0x5:
+        // Set flag if we underflowed.
+        _v[0xF] = _v[data.x] > _v[data.y] ? 1 : 0;
+        _v[data.x] -= _v[data.y];
+        break;
+      case 0x6:
+        // Set flag if we shifted a 1 off the end.
+        _v[0xF] = (_v[data.x] & 0x1) != 0 ? 1 : 0;
+        _v[data.x] = _v[data.x] >> 1; // Shift right.
+        break;
+      case 0x7:
+        // Set flag if we underflowed.
+        _v[0xF] = _v[data.y] > _v[data.x] ? 1 : 0;
+        _v[data.y] -= _v[data.x];
+        break;
+      case 0xE:
+        // Set flag if we shifted a 1 off the end.
+        _v[0xF] = (_v[data.x] & 0xF) != 0 ? 1 : 0;
+        _v[data.x] = _v[data.x] << 1; // Shift left.
+        break;
+    }
+  }
+
   void _skipIfXNotEqualY(OpCodeData data) {}
-  void _setI(OpCodeData data) {}
+  void _setI(OpCodeData data) {
+    _i = data.nnn;
+  }
+
   void _jumpWithOffset(OpCodeData data) {}
-  void _rnd(OpCodeData data) {}
-  void _drawSprite(OpCodeData data) {}
+  void _rnd(OpCodeData data) {
+    _v[data.x] = _rng.nextInt(256) & data.nn;
+  }
+
+  void _drawSprite(OpCodeData data) {
+    var startX = _v[data.x];
+    var startY = _v[data.y];
+
+    _v[0xF] = 0;
+    for (var i = 0; i < data.n; i++) {
+      var spriteLine = _ram[_i + i]; // A line of the sprite to render
+
+      for (var bit = 0; bit < 8; bit++) {
+        var x = (startX + bit) % screenWidth;
+        var y = (startY + i) % screenHeight;
+
+        var spriteBit = ((spriteLine >> (7 - bit)) & 1);
+        var oldBit = _screenBuffer[x][y] ? 1 : 0;
+
+        if (oldBit != spriteBit) _needsRedraw = true;
+
+        // New bit is XOR of existing and new.
+        var newBit = oldBit ^ spriteBit;
+
+        if (newBit != 0) _screenBuffer[x][y] = true;
+
+        // If we wiped out a pixel, set flag for collission.
+        if (oldBit != 0 && newBit == 0) _v[0xF] = 1;
+      }
+    }
+  }
+
   void _skipOnKey(OpCodeData data) {}
-  void _misc(OpCodeData data) {}
-  void _setXToDelay(OpCodeData data) {}
+  void _misc(OpCodeData data) {
+    if (_opCodesMisc.containsKey(data.nn)) {
+      _opCodesMisc[data.nn](data);
+    }
+  }
+
+  void _setXToDelay(OpCodeData data) {
+    _v[data.x] = _delay;
+  }
+
   void _waitForKey(OpCodeData data) {}
-  void _setDelay(OpCodeData data) {}
+  void _setDelay(OpCodeData data) {
+    _delay = _v[data.x];
+  }
+
   void _setSound(OpCodeData data) {}
-  void _addXToI(OpCodeData data) {}
-  void _setIForChar(OpCodeData data) {}
-  void _binaryCodedDecimal(OpCodeData data) {}
-  void _saveX(OpCodeData data) {}
-  void _loadX(OpCodeData data) {}
+  void _addXToI(OpCodeData data) {
+    _i += _v[data.x];
+  }
+
+  void _setIForChar(OpCodeData data) {
+    // 0 is at 0x0, 1 is at 0x5, ...
+    _i = _v[data.x] * 5;
+  }
+
+  void _binaryCodedDecimal(OpCodeData data) {
+    _ram[_i + 0] = ((_v[data.x] / 100) % 10) as int;
+    _ram[_i + 1] = ((_v[data.x] / 10) % 10) as int;
+  }
+
+  void _saveX(OpCodeData data) {
+    for (var i = 0; i <= data.x; i++) {
+      _ram[_i + i] = _v[i];
+    }
+  }
+
+  void _loadX(OpCodeData data) {
+    for (var i = 0; i <= data.x; i++) {
+      _v[i] = _ram[_i + i];
+    }
+  }
 }
 
 class OpCodeData {

@@ -222,7 +222,10 @@ class Chip8 {
     }
   }
 
-  void _skipIfXNotEqualY(OpCodeData data) {}
+  void _skipIfXNotEqualY(OpCodeData data) {
+    if (_v[data.x] != _v[data.x]) PC += 2;
+  }
+
   void _setI(OpCodeData data) {
     _i = data.nnn;
   }
@@ -260,7 +263,15 @@ class Chip8 {
     }
   }
 
-  void _skipOnKey(OpCodeData data) {}
+  void _skipOnKey(OpCodeData data) {
+    // 9E = IfKeyPressed
+    // A1 = IfKeyNotPressed
+    if ((data.nn == 0x9E && _pressedKeys.contains(_v[data.x])) ||
+        (data.nn == 0xA1 && !_pressedKeys.contains(_v[data.x]))) {
+      _pc += 2;
+    }
+  }
+
   void _misc(OpCodeData data) {
     if (_opCodesMisc.containsKey(data.nn)) {
       _opCodesMisc[data.nn](data);
@@ -271,7 +282,13 @@ class Chip8 {
     _v[data.x] = _delay;
   }
 
-  void _waitForKey(OpCodeData data) {}
+  void _waitForKey(OpCodeData data) {
+    if (_pressedKeys.length != 0)
+      _v[data.x] = _pressedKeys.first;
+    else
+      _pc -= 2;
+  }
+
   void _setDelay(OpCodeData data) {
     _delay = _v[data.x];
   }

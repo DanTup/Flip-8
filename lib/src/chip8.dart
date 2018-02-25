@@ -105,10 +105,10 @@ class Chip8 {
 
   void _draw() {
     // TODO: Extract bitmap stuff into another class and re-use header (doesn't change).
-    const headerLengthBytes = 54;
-    final bytes = headerLengthBytes + (screenWidth * screenHeight);
+    const headerLengthBytes = 62;
+    final lengthBytes = headerLengthBytes + (screenWidth * screenHeight);
     var header = new Uint8List(headerLengthBytes);
-    var frame = new Uint8List(bytes);
+    var frame = new Uint8List(lengthBytes);
 
     // https://en.wikipedia.org/wiki/BMP_file_format
 
@@ -118,29 +118,34 @@ class Chip8 {
 
     // BMP Header
     header.setRange(0, 2, ASCII.encode('BM'));
-    header.setRange(2, 6, as4Bytes(bytes));
+    header.setRange(2, 6, as4Bytes(lengthBytes));
     header.setRange(10, 14, as4Bytes(headerLengthBytes));
 
     // DIB Header (BITMAPINFOHEADER)
     header.setRange(14, 18, as4Bytes(40)); // DIB Header length
-    header.setRange(18, 22, as4Bytes(screenWidth)); // 64, 0, 1, 0
+    header.setRange(18, 22, as4Bytes(screenWidth));
     header.setRange(22, 26, as4Bytes(screenHeight));
     header.setRange(26, 28, as2Bytes(1));
-    header.setRange(28, 30, as2Bytes(1)); //BPP
+    header.setRange(28, 30, as2Bytes(8)); // bits per pixel
     header.setRange(38, 42, as4Bytes(2835));
     header.setRange(42, 46, as4Bytes(2835));
+    header.setRange(46, 50, as4Bytes(2)); // number of colours
+
+    // Color table
+    header.setRange(54, 58, [0, 0, 0, 0]); // black
+    header.setRange(58, 62, [255, 255, 255, 0]); // white
 
     // Copy header to frame
     frame.setAll(0, header);
 
     var idx = headerLengthBytes;
 
-    for (var x = 0; x < screenWidth; x++) {
-      for (var y = 0; y < screenHeight; y++) {
-        var pixelIsOn = _screenBuffer[x][y];
-        frame[idx++] = pixelIsOn ? 255 : 0;
+    for (var y = 0; y < screenHeight; y++) {
+      for (var x = 0; x < screenWidth; x++) {
+        frame[idx++] = _screenBuffer[x][screenHeight - y - 1] ? 0 : 1;
       }
     }
+
     _renderFrame(frame);
   }
 

@@ -37,13 +37,13 @@ class _Flip8State extends State<Flip8> {
     chip8 = new Chip8((Image newFrame) {
       setState(() => currentFrame = newFrame);
     });
-    rootBundle
-        .load('assets/breakout.ch8')
-        .then((bytes) => chip8.loadProgram(bytes.buffer.asUint8List()));
-    tickTimer60Hz = new Timer.periodic(
-        new Duration(milliseconds: 17), (_) => chip8.tick60Hz());
-    tickTimer =
-        new Timer.periodic(new Duration(milliseconds: 1), (_) => chip8.tick());
+    rootBundle.load('assets/breakout.ch8').then((bytes) {
+      chip8.loadProgram(bytes.buffer.asUint8List());
+      tickTimer60Hz = new Timer.periodic(
+          new Duration(milliseconds: 17), (_) => chip8.tick60Hz());
+      tickTimer = new Timer.periodic(
+          new Duration(milliseconds: 1), (_) => chip8.tick());
+    });
   }
 
   @override

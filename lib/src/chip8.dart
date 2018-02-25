@@ -1,7 +1,8 @@
 import 'dart:collection';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
-import 'dart:ui';
+
 import 'package:flip8/src/font.dart';
 
 class Chip8 {
@@ -25,10 +26,10 @@ class Chip8 {
   Map<int, void Function(OpCodeData)> _opCodes;
   Map<int, void Function(OpCodeData)> _opCodesMisc;
 
-  void Function(Image) _sendImage;
+  void Function(Uint8List) _renderFrame;
 
-  Chip8(void Function(Image) draw) {
-    _sendImage = draw;
+  Chip8(void Function(Uint8List) draw) {
+    _renderFrame = draw;
 
     _writeFonts();
 
@@ -103,7 +104,44 @@ class Chip8 {
   }
 
   void _draw() {
-    throw UnimplementedError();
+    // TODO: Extract bitmap stuff into another class and re-use header (doesn't change).
+    const headerLengthBytes = 54;
+    final bytes = headerLengthBytes + (screenWidth * screenHeight);
+    var header = new Uint8List(headerLengthBytes);
+    var frame = new Uint8List(bytes);
+
+    // https://en.wikipedia.org/wiki/BMP_file_format
+
+    List<int> as4Bytes(int value) =>
+        [value, value >> 8, value >> 16, value >> 24];
+    List<int> as2Bytes(int value) => [value, value >> 8];
+
+    // BMP Header
+    header.setRange(0, 2, ASCII.encode('BM'));
+    header.setRange(2, 6, as4Bytes(bytes));
+    header.setRange(10, 14, as4Bytes(headerLengthBytes));
+
+    // DIB Header (BITMAPINFOHEADER)
+    header.setRange(14, 18, as4Bytes(40)); // DIB Header length
+    header.setRange(18, 22, as4Bytes(screenWidth)); // 64, 0, 1, 0
+    header.setRange(22, 26, as4Bytes(screenHeight));
+    header.setRange(26, 28, as2Bytes(1));
+    header.setRange(28, 30, as2Bytes(1)); //BPP
+    header.setRange(38, 42, as4Bytes(2835));
+    header.setRange(42, 46, as4Bytes(2835));
+
+    // Copy header to frame
+    frame.setAll(0, header);
+
+    var idx = headerLengthBytes;
+
+    for (var x = 0; x < screenWidth; x++) {
+      for (var y = 0; y < screenHeight; y++) {
+        var pixelIsOn = _screenBuffer[x][y];
+        frame[idx++] = pixelIsOn ? 255 : 0;
+      }
+    }
+    _renderFrame(frame);
   }
 
   void _writeFonts() {
@@ -316,8 +354,8 @@ class Chip8 {
   }
 
   void _binaryCodedDecimal(OpCodeData data) {
-    _ram[_i + 0] = ((_v[data.x] / 100) % 10) as int;
-    _ram[_i + 1] = ((_v[data.x] / 10) % 10) as int;
+    _ram[_i + 0] = ((_v[data.x] / 100) % 10).toInt();
+    _ram[_i + 1] = ((_v[data.x] / 10) % 10).toInt();
   }
 
   void _saveX(OpCodeData data) {

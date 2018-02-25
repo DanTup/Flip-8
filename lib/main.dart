@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flip8/src/chip8.dart';
 import 'package:flutter/material.dart';
@@ -32,10 +33,20 @@ class _Flip8State extends State<Flip8> {
   Timer tickTimer60Hz;
   Timer tickTimer;
 
+  static final double screenWidth = Chip8.screenWidth.toDouble();
+  static final double screenHeight = Chip8.screenHeight.toDouble();
+
   _Flip8State() {
     currentFrame = new Image.asset('assets/blank.png', fit: BoxFit.contain);
-    chip8 = new Chip8((Image newFrame) {
-      setState(() => currentFrame = newFrame);
+    chip8 = new Chip8((Uint8List frameData) {
+      setState(() {
+        currentFrame = new Image.memory(
+          frameData,
+          width: screenWidth,
+          height: screenHeight,
+          gaplessPlayback: true,
+        );
+      });
     });
     rootBundle.load('assets/breakout.ch8').then((bytes) {
       chip8.loadProgram(bytes.buffer.asUint8List());

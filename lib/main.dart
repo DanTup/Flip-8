@@ -111,6 +111,11 @@ class _Flip8State extends State<Flip8> {
             ],
           ),
           new RaisedButton(child: Text("Reset"), onPressed: _reset),
+          new Text(
+            "FLIP-8 by DanTup",
+            textAlign: TextAlign.center,
+            style: new TextStyle(fontWeight: FontWeight.bold),
+          )
         ],
       ),
     );
@@ -120,7 +125,8 @@ class _Flip8State extends State<Flip8> {
     return new GestureDetector(
       child: new RaisedButton(
         child: Text(text),
-        onPressed: () {},
+        // TODO: This makes buttons look disable, but else onTapUp doesn't fire
+        onPressed: null,
       ),
       onTapDown: (_) => chip8.keyDown(keyValue),
       onTapUp: (_) => chip8.keyUp(keyValue),

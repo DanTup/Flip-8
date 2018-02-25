@@ -305,12 +305,12 @@ class Chip8 {
         var spriteBit = ((spriteLine >> (7 - bit)) & 1);
         var oldBit = _screenBuffer[x][y] ? 1 : 0;
 
+        // TODO: Shouldn't we set this flag since XOR?
         if (oldBit != spriteBit) _needsRedraw = true;
 
         // New bit is XOR of existing and new.
         var newBit = oldBit ^ spriteBit;
-
-        if (newBit != 0) _screenBuffer[x][y] = true;
+        _screenBuffer[x][y] = newBit != 0;
 
         // If we wiped out a pixel, set flag for collission.
         if (oldBit != 0 && newBit == 0) _v[0xF] = 1;

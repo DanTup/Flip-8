@@ -35,6 +35,12 @@ class _Flip8State extends State<Flip8> {
 
   _Flip8State() {
     currentFrame = new Image.asset('assets/blank.png', fit: BoxFit.contain);
+    _reset();
+  }
+
+  void _reset() {
+    if (tickTimer60Hz != null) tickTimer60Hz.cancel();
+    if (tickTimer != null) tickTimer.cancel();
     chip8 = new Chip8((Uint8List frameData) {
       setState(() {
         currentFrame = new Image.memory(
@@ -60,10 +66,64 @@ class _Flip8State extends State<Flip8> {
         title: new Text(widget.title),
       ),
       body: new Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[currentFrame],
+        children: <Widget>[
+          currentFrame,
+          new Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _makeButton("1", 0x1),
+              _makeButton("2", 0x2),
+              _makeButton("3", 0x3),
+              _makeButton("4", 0x4),
+            ],
+          ),
+          new Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _makeButton("4", 0x4),
+              _makeButton("5", 0x5),
+              _makeButton("6", 0x6),
+              _makeButton("D", 0xD),
+            ],
+          ),
+          new Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _makeButton("7", 0x7),
+              _makeButton("8", 0x8),
+              _makeButton("9", 0x9),
+              _makeButton("E", 0xE),
+            ],
+          ),
+          new Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _makeButton("A", 0xA),
+              _makeButton("0", 0x0),
+              _makeButton("B", 0xB),
+              _makeButton("F", 0xF),
+            ],
+          ),
+          new RaisedButton(child: Text("Reset"), onPressed: _reset),
+        ],
       ),
+    );
+  }
+
+  Widget _makeButton(String text, int keyValue) {
+    return new GestureDetector(
+      child: new RaisedButton(
+        child: Text(text),
+        onPressed: () {},
+      ),
+      onTapDown: (_) => chip8.keyDown(keyValue),
+      onTapUp: (_) => chip8.keyUp(keyValue),
     );
   }
 }

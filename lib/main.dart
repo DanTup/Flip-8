@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flip8/src/chip8.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() => runApp(new MyApp());
 
@@ -24,11 +27,23 @@ class Flip8 extends StatefulWidget {
 }
 
 class _Flip8State extends State<Flip8> {
-  Chip8 chip8 = new Chip8();
+  Chip8 chip8;
   Image currentFrame;
+  Timer tickTimer60Hz;
+  Timer tickTimer;
 
   _Flip8State() {
     currentFrame = new Image.asset('assets/blank.png', fit: BoxFit.contain);
+    chip8 = new Chip8((Image newFrame) {
+      setState(() => currentFrame = newFrame);
+    });
+    rootBundle
+        .load('assets/breakout.ch8')
+        .then((bytes) => chip8.loadProgram(bytes.buffer.asUint8List()));
+    tickTimer60Hz = new Timer.periodic(
+        new Duration(milliseconds: 17), (_) => chip8.tick60Hz());
+    tickTimer =
+        new Timer.periodic(new Duration(milliseconds: 1), (_) => chip8.tick());
   }
 
   @override

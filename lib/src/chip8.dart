@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
+import 'dart:ui';
 import 'package:flip8/src/font.dart';
 
 class Chip8 {
@@ -24,7 +25,11 @@ class Chip8 {
   Map<int, void Function(OpCodeData)> _opCodes;
   Map<int, void Function(OpCodeData)> _opCodesMisc;
 
-  Chip8() {
+  void Function(Image) _sendImage;
+
+  Chip8(void Function(Image) draw) {
+    _sendImage = draw;
+
     _writeFonts();
 
     _opCodes = <int, void Function(OpCodeData)>{
@@ -59,7 +64,9 @@ class Chip8 {
     };
   }
 
-  void loadProgram(Uint8List data) {}
+  void loadProgram(Uint8List data) {
+    _ram.setRange(0x200, 0x200 + data.length, data);
+  }
 
   void tick() {
     // Read the two bytes of OpCode (big endian).
@@ -95,7 +102,9 @@ class Chip8 {
     _pressedKeys.remove(key);
   }
 
-  void _draw() {}
+  void _draw() {
+    throw UnimplementedError();
+  }
 
   void _writeFonts() {
     var offset = 0x0;

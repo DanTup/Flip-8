@@ -13,3 +13,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/blank.png
+    - assets/breakout.ch8

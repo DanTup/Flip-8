@@ -121,6 +121,7 @@ class _Flip8State extends State<Flip8> {
           frameData,
           gaplessPlayback: true,
           fit: BoxFit.contain,
+          filterQuality: FilterQuality.none,
         );
       });
     });

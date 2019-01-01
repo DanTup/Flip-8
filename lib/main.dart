@@ -7,6 +7,15 @@ import 'package:flutter/services.dart';
 
 void main() => runApp(new MyApp());
 
+class Flip8 extends StatefulWidget {
+  Flip8({Key key, this.title}) : super(key: key);
+
+  final String title;
+
+  @override
+  _Flip8State createState() => new _Flip8State();
+}
+
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
@@ -18,46 +27,16 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Flip8 extends StatefulWidget {
-  Flip8({Key key, this.title}) : super(key: key);
-
-  final String title;
-
-  @override
-  _Flip8State createState() => new _Flip8State();
-}
-
 class _Flip8State extends State<Flip8> {
-  Chip8 chip8;
-  Image currentFrame;
-  Timer tickTimer60Hz;
-  Timer tickTimer;
-
   _Flip8State() {
     currentFrame = new Image.asset('assets/blank.png', fit: BoxFit.contain);
     _reset();
   }
 
-  void _reset() {
-    if (tickTimer60Hz != null) tickTimer60Hz.cancel();
-    if (tickTimer != null) tickTimer.cancel();
-    chip8 = new Chip8((Uint8List frameData) {
-      setState(() {
-        currentFrame = new Image.memory(
-          frameData,
-          gaplessPlayback: true,
-          fit: BoxFit.contain,
-        );
-      });
-    });
-    rootBundle.load('assets/breakout.ch8').then((bytes) {
-      chip8.loadProgram(bytes.buffer.asUint8List());
-      tickTimer60Hz = new Timer.periodic(
-          new Duration(milliseconds: 17), (_) => chip8.tick60Hz());
-      tickTimer = new Timer.periodic(
-          new Duration(milliseconds: 1), (_) => chip8.tick());
-    });
-  }
+  Chip8 chip8;
+  Image currentFrame;
+  Timer tickTimer60Hz;
+  Timer tickTimer;
 
   @override
   Widget build(BuildContext context) {
@@ -131,5 +110,26 @@ class _Flip8State extends State<Flip8> {
       onTapDown: (_) => chip8.keyDown(keyValue),
       onTapUp: (_) => chip8.keyUp(keyValue),
     );
+  }
+
+  void _reset() {
+    if (tickTimer60Hz != null) tickTimer60Hz.cancel();
+    if (tickTimer != null) tickTimer.cancel();
+    chip8 = new Chip8((Uint8List frameData) {
+      setState(() {
+        currentFrame = new Image.memory(
+          frameData,
+          gaplessPlayback: true,
+          fit: BoxFit.contain,
+        );
+      });
+    });
+    rootBundle.load('assets/breakout.ch8').then((bytes) {
+      chip8.loadProgram(bytes.buffer.asUint8List());
+      tickTimer60Hz = new Timer.periodic(
+          new Duration(milliseconds: 17), (_) => chip8.tick60Hz());
+      tickTimer = new Timer.periodic(
+          new Duration(milliseconds: 1), (_) => chip8.tick());
+    });
   }
 }

@@ -6,28 +6,6 @@ import 'dart:typed_data';
 import 'package:flip8/src/font.dart';
 
 class Chip8 {
-  static const int screenWidth = 64;
-  static const int screenHeight = 32;
-
-  bool _needsRedraw = false;
-  Uint8List _v = new Uint8List(16);
-  int _delay = 0;
-  int _i = 0;
-  int _pc = 0x200;
-  int _sp = 0;
-  Uint16List _stack = new Uint16List(16);
-  Uint8List _ram = new Uint8List(0x1000);
-  HashSet<int> _pressedKeys = new HashSet<int>();
-
-  final _rng = new Random();
-  final List<List<bool>> _screenBuffer = new List<List<bool>>.generate(
-      screenWidth, (_) => new List<bool>.filled(screenHeight, false),
-      growable: false);
-  Map<int, void Function(OpCodeData)> _opCodes;
-  Map<int, void Function(OpCodeData)> _opCodesMisc;
-
-  void Function(Uint8List) _renderFrame;
-
   Chip8(void Function(Uint8List) draw) {
     _renderFrame = draw;
 
@@ -64,6 +42,28 @@ class Chip8 {
       0x65: _loadX,
     };
   }
+
+  static const int screenWidth = 64;
+  static const int screenHeight = 32;
+
+  bool _needsRedraw = false;
+  Uint8List _v = new Uint8List(16);
+  int _delay = 0;
+  int _i = 0;
+  int _pc = 0x200;
+  int _sp = 0;
+  Uint16List _stack = new Uint16List(16);
+  Uint8List _ram = new Uint8List(0x1000);
+  HashSet<int> _pressedKeys = new HashSet<int>();
+
+  final _rng = new Random();
+  final List<List<bool>> _screenBuffer = new List<List<bool>>.generate(
+      screenWidth, (_) => new List<bool>.filled(screenHeight, false),
+      growable: false);
+  Map<int, void Function(OpCodeData)> _opCodes;
+  Map<int, void Function(OpCodeData)> _opCodesMisc;
+
+  void Function(Uint8List) _renderFrame;
 
   void loadProgram(Uint8List data) {
     _ram.setRange(0x200, 0x200 + data.length, data);
@@ -117,7 +117,7 @@ class Chip8 {
     List<int> as2Bytes(int value) => [value, value >> 8];
 
     // BMP Header
-    header.setRange(0, 2, ASCII.encode('BM'));
+    header.setRange(0, 2, ascii.encode('BM'));
     header.setRange(2, 6, as4Bytes(lengthBytes));
     header.setRange(10, 14, as4Bytes(headerLengthBytes));
 
